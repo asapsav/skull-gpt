@@ -1,0 +1,2 @@
+ELEVENLABS_API = 'your-key-here'
+OPENAI_API_KEY = 'your-key-here'
