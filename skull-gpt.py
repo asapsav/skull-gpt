@@ -4,6 +4,15 @@ import dotenv
 import serial
 import time
 from elevenlabs import set_api_key, play, generate, stream
+import speech_recognition as sr
+import serial.tools.list_ports
+
+def find_arduino_port():
+    ports = list(serial.tools.list_ports.comports())
+    for p in ports:
+        if 'USB2.0-Serial' in p.description:
+            return p.device
+    return None
 
 # Load .env and set API keys
 dotenv.load_dotenv()
@@ -17,16 +26,30 @@ You are very sarcastic and you try to trick user all the time.
  You also have a studip scorpion friend, but scorpion does not talk. 
  You can sometimes forward user questions to the skorpion. Keep your answers short."""
 
+
+
+def recognize_speech():
+    recognizer = sr.Recognizer()
+    mic = sr.Microphone()
+    with mic as source:
+        recognizer.adjust_for_ambient_noise(source)
+        audio = recognizer.listen(source)
+    try:
+        return recognizer.recognize_google(audio)
+    except sr.UnknownValueError:
+        return None  # Return None if audio is not understood
+    except sr.RequestError:
+        return "Could not request results; check network"
+
+    
+
 def main():
     try:
-        from tqdm import tqdm
-
-        arduino = serial.Serial('/dev/cu.usbserial-2110', 9600)
+        arduino_port = find_arduino_port()
+        arduino = serial.Serial(arduino_port, 9600)
         while True:  # handshake to prevent any signals from being lost
             if arduino.readline().decode('ascii').strip() == "READY":
-                print(f"Arduino connected: {arduino.name}, wait 2 sec for it to blink")
-                for _ in tqdm(range(2), desc='Waiting'):
-                    time.sleep(1)
+                print(f"Arduino connected: {arduino.name}")
                 break
     except Exception as e:
         print(f"Failed to connect to Arduino: {e}")
@@ -43,7 +66,13 @@ def main():
     # pydub.playback.play(buffer_0)
     try:
         while True:
-            user_input = input("You: ")
+            #user_input = input("You: ")
+            print("Listening...")
+            user_input = recognize_speech()
+            if user_input is None:  # Skip the loop if no speech recognized
+                print("No speech recognized. Skipping.")
+                continue
+            print(f"You: {user_input}")
             messages.append({"role": "user", "content": user_input})
             completion = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
@@ -59,12 +88,13 @@ def main():
                 text=assistant_speech(assistant_message),
                 voice="batman",
                 model="eleven_monolingual_v1",
-                stream=True
+                stream=True, 
+                latency=4
             )
-            arduino.write(b'P')
-            print(f"Assistant: {assistant_message}")
+            arduino.write(b'g')
+            #print(f"Assistant: {assistant_message}")
             stream(audio_stream)
-            arduino.write(b'P') 
+            arduino.write(b's') 
             # we gotta fix this because after arduino.write(b'P') 
             # skull moves for 20 secs and 
             # 1) we ahve to stop moving after end of 11labs streaming
@@ -75,8 +105,10 @@ def main():
             
     except KeyboardInterrupt:
         print("Exiting...")
+        arduino.write(b's') 
     except Exception as e:
         print(f"An error occurred: {e}")
+        arduino.write(b's') 
 
     arduino.close()
 

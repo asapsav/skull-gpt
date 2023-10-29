@@ -8,6 +8,7 @@
   pip install python-dotenv openai pyserial tqdm elevenlabs
   ```
 - `.env` file with `OPENAI_API_KEY` and `ELEVENLABS_API`
+- one skull with a motorized jaw and LED eyes i used this one: https://www.amazon.com/gp/product/B07ZQXJQZC/ref=ppx_yo_dt_b_asin_title_o00_s00?ie=UTF8&psc=1
 
 #### Functionality
 This script connects to an Arduino via serial, simulates an "evil bro skull" chatbot for Halloween using GPT-3.5-turbo and ElevenLabs API for voice generation. It reads user inputs, processes them, and plays the voice back.
