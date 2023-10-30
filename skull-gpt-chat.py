@@ -68,12 +68,7 @@ def main():
             arduino.write(b'g')
             print(f"Assistant: {assistant_message}")
             stream(audio_stream)
-            arduino.write(b's') 
-            # we gotta fix this because after arduino.write(b'P') 
-            # skull moves for 20 secs and 
-            # 1) we ahve to stop moving after end of 11labs streaming
-            # 2) we have to  keep moving while streaming is happenidn
-            # probabry should use threading
+            arduino.write(b's')
             
             messages.append({"role": "assistant", "content": assistant_message})
             

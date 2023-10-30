@@ -59,14 +59,8 @@ def main():
         {"role": "system", "content": SKULL_SYSTEM_PROMPT}
     ]
 
-    # from pydub import AudioSegment
-    # import pydub.playback 
-    # # Load MP3 file into pydub
-    # buffer_0 = AudioSegment.from_mp3("buffer_0.mp3")
-    # pydub.playback.play(buffer_0)
     try:
         while True:
-            #user_input = input("You: ")
             print("Listening...")
             user_input = recognize_speech()
             if user_input is None:  # Skip the loop if no speech recognized
@@ -95,11 +89,6 @@ def main():
             #print(f"Assistant: {assistant_message}")
             stream(audio_stream)
             arduino.write(b's') 
-            # we gotta fix this because after arduino.write(b'P') 
-            # skull moves for 20 secs and 
-            # 1) we ahve to stop moving after end of 11labs streaming
-            # 2) we have to  keep moving while streaming is happenidn
-            # probabry should use threading
             
             messages.append({"role": "assistant", "content": assistant_message})
             

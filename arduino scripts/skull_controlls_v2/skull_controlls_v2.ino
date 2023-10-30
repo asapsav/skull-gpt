@@ -8,29 +8,25 @@ void setup() {
   pinMode(ledPin_right, OUTPUT);
   pinMode(motorPin, OUTPUT);
   Serial.println("READY");
+  digitalWrite(ledPin_left, HIGH);
+  digitalWrite(ledPin_right, HIGH);
 }
 
 void blinkOnce() {
-  digitalWrite(ledPin_left, HIGH);
-  digitalWrite(ledPin_right, HIGH);
   digitalWrite(motorPin, HIGH);
-  delay(100);
-  digitalWrite(ledPin_left, LOW);
-  digitalWrite(ledPin_right, LOW);
+  delay(150);
   digitalWrite(motorPin, LOW);
-  delay(100);
+  delay(150);
 }
 
 
 bool runCustomSequence = false;
 
 void loop() {
+
   if (runCustomSequence) {
       // Custom sequence
       blinkOnce();
-      blinkOnce();
-      blinkOnce();
-      delay(200);
       blinkOnce();
       blinkOnce();
     }
