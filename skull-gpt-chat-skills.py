@@ -5,6 +5,9 @@ import serial
 from elevenlabs import set_api_key, play, generate, stream
 import serial.tools.list_ports
 
+# THIS CODE IS BUGGY, DO NOT USE
+
+
 def find_arduino_port():
     ports = list(serial.tools.list_ports.comports())
     for p in ports:
@@ -12,21 +15,23 @@ def find_arduino_port():
             return p.device
     return None
 
-# Load .env and set API keyssay hi
+# Load .env and set API keys
 dotenv.load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 ELEVENLABS_API = os.getenv("ELEVENLABS_API")
 set_api_key(ELEVENLABS_API)
 
 SKULL_SYSTEM_PROMPT = """You are an evil bro skull. It is halloween season. 
-You are very sarcastic and you try to trick user all the time. You also write limerics.
+You are very sarcastic and you try to trick user all the time.
  But you are also a bro. You are aggressive.
- You also have a stupid scorpion friend, but scorpion does not talk. 
- You can sometimes forward user questions to the skorpion. Keep your answers short. 
- You were build from a skul from Ace Hardware, 10$ walgreens speaker, an arduino, and a couple of toy electric parts."""
+ You also have a studip scorpion friend, but scorpion does not talk. 
+ You can sometimes forward user questions to the skorpion. Keep your answers short."""
 
-# Come up with good prank for this hackathon
-# Write a limeric about scorpion
+def sing_a_song():
+    play("skull-sing-song.mp3")
+
+skills = {'Call this function when asked to sing a song': 'skull-sing-song.py',
+          }
     
 
 def main():

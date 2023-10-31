@@ -9,6 +9,10 @@ from elevenlabs import set_api_key, generate, stream
 import speech_recognition as sr
 import serial.tools.list_ports
 
+
+# THIS CODE KEEP GIVING ME ERROR:
+
+
 # ... (other functions like find_arduino_port and recognize_speech remain the same)
 def find_arduino_port():
     ports = list(serial.tools.list_ports.comports())
@@ -112,8 +116,8 @@ def main(arduino=None):
         if arduino:
             arduino.write(b's') 
 
-    audio_stream.stop_stream()
-    response_audio_stream.close()
+    #audio_stream.stop_stream()
+    #response_audio_stream.close()
     pa.terminate()
     porcupine.delete()
     if arduino:

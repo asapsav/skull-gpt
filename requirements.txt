@@ -1,0 +1,9 @@
+numpy
+pyaudio
+pvporcupine
+python-dotenv
+openai
+pyserial
+elevenlabs
+speechrecognition
+

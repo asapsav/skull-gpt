@@ -2,7 +2,6 @@ import os
 import openai
 import dotenv
 import serial
-import time
 from elevenlabs import set_api_key, play, generate, stream
 import speech_recognition as sr
 import serial.tools.list_ports
