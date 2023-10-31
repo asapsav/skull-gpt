@@ -36,11 +36,11 @@ total t(voice responce) - t(question asked): 3.5s
 - skull-gpt-hotword.py gives ||PaMacCore (AUHAL)|| Error on line 2523: err='-50', msg=Unknown Error
 
 #### TODO
-- [] Change Arduino Nano to wifi controller with Mic to remove usb cord
-- [] Fix the hotword detection (Error on line 2523: err='-50')
-- [] Optimise SpeechRecognition library to reduce latency, like use simpler model or tune pause threshold
-- [] Split ElevenLabs streaming and Arduino skull movements into two threads to syncronise jaw movements and speech.
-- [] Add agency features to the skull and function calling to change ElevenLabs voice, draw spooky Dalle pictures, make prank calls with Twilio, etc.
+- [ ] Change Arduino Nano to wifi controller with Mic to remove usb cord
+- [ ] Fix the hotword detection (Error on line 2523: err='-50')
+- [ ] Optimise SpeechRecognition library to reduce latency, like use simpler model or tune pause threshold
+- [ ] Split ElevenLabs streaming and Arduino skull movements into two threads to syncronise jaw movements and speech.
+- [ ] Add agency features to the skull and function calling to change ElevenLabs voice, draw spooky Dalle pictures, make prank calls with Twilio, etc.
 
 #### Acknowledgements
 Thank you Noisebridge for using some of your parts. Thank you GPT for 101 on simple driver circuits and microcontrollers.
