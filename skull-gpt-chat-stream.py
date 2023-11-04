@@ -2,14 +2,17 @@ import os
 import openai
 import dotenv
 import serial
-from elevenlabs import set_api_key, play, generate, stream
+from elevenlabs import set_api_key, play, generate, stream, Voice, VoiceSettings
 import serial.tools.list_ports
 
 # This version uses threading to stream GPT respones, 
 # collect them in batches, send them to ElevenLabs and stream the audio 
 # all concurrently. This is an attempt to make the most efficient way to stream audio from GPT.
 
-# Under development
+# Under development, gotta tyne batch sizes and number or threads 
+# (one for collecting openai responses in queued batches, 
+# one for sending batches to Eleven labs, 
+# one for taking ready audios from a queue and streaming it)
 
 def find_arduino_port():
     ports = list(serial.tools.list_ports.comports())
@@ -37,44 +40,60 @@ import threading
 from queue import Queue    
 import time
 
-def collect_openai_responses(response_openai, queue, messages):
+def collect_openai_responses(response_openai, queue, messages, user_input_time):
     collected_messages, messages_batch = [], []
-    batch_counter, sentence_counter = 0, 0
+    sentence_counter = 0
 
     for chunk in response_openai:
+
+        if chunk['choices'][0]['delta'].get('role') == 'assistant':
+            print(f"Time to get first chunk: {time.time() - user_input_time}")
+
         chunk_delta = chunk['choices'][0]['delta']
         collected_messages.append(chunk_delta)
         messages_batch.append(chunk_delta)
-
         if any(punct in chunk_delta.get('content', '') for punct in ".!?"):
             sentence_counter += 1
 
-        batch_counter += 1
-
-        if sentence_counter >= 4 or batch_counter >= 50 or chunk['choices'][0].get('finish_reason') == "stop":
+        # this is a not very good hack to send first couple of sentences to Eleven Labs while we wait for the rest of the text
+        # (because ideally we need to mess with eleven labs generate 
+        # to start generating a soon as first couple sentences emerge, 
+        # and i dont immediatelly know how to do that now)
+        # seems like 2 is optimal on a wework wi-fi
+        if sentence_counter == 2 or chunk['choices'][0].get('finish_reason') == "stop":
             batch_reply_content = ''.join(m.get('content', '') for m in messages_batch)
-            print(f"Skull: {batch_reply_content}")
+            #print(f"Skull: ###{batch_reply_content}###")
             queue.put(batch_reply_content)
             messages_batch.clear()
-            batch_counter, sentence_counter = 0, 0
+            sentence_counter += 1000
         
     # Combine chunks into full text
     full_reply_content = ''.join([m.get('content', '') for m in collected_messages])
+    end_time_openai = time.time()
+    print(f"Time to collect openai responses: {end_time_openai - user_input_time}")
     messages.append({"role": "assistant", "content": full_reply_content})
 
-def generate_and_stream_audio(queue):
+def generate_and_stream_audio(queue, user_input_time):
     while True:
         text = queue.get()  # get text from the queue
         if text is None: break  # None is the signal to stop
         
+        # I have a feeling here that `generate` function is already optimised to stream audio effitiently
+        # i have to measure time between user input and the first audio chunk with and without batching
+
         # Convert text to speech and stream
         audio_stream = generate(
             text=text,
-            voice="batman",
+            voice=Voice(
+            voice_id='NuVRT1lw1hsKBhV4OtOv', # batman
+            settings=VoiceSettings(stability=0.9, similarity_boost=0.75, style=0.0, use_speaker_boost=False)
+            ),
             model="eleven_monolingual_v1",
             stream=True, 
-            latency=4
+            latency=4 # max latency optimisation
         )
+        end_time_first_audio = time.time()
+        print(f"Time to generate audio: {end_time_first_audio - user_input_time}")
         stream(audio_stream)
         queue.task_done()
 
@@ -87,7 +106,7 @@ def main(arduino=None):
     try:
         while True:
             user_input = input("You: ")
-            start_time = time.time()
+            user_input_time = time.time()
             messages.append({"role": "user", "content": user_input})
 
             response_openai = openai.ChatCompletion.create(
@@ -100,11 +119,13 @@ def main(arduino=None):
             message_queue = Queue()
 
             # Start the thread that collects OpenAI responses
-            openai_thread = threading.Thread(target=collect_openai_responses, args=(response_openai, message_queue, messages))
+            openai_thread = threading.Thread(target=collect_openai_responses, 
+                                             args=(response_openai, message_queue, messages, user_input_time))
             openai_thread.start()
 
             # Start the thread that generates and streams audio
-            audio_thread = threading.Thread(target=generate_and_stream_audio, args=(message_queue,))
+            audio_thread = threading.Thread(target=generate_and_stream_audio, 
+                                            args=(message_queue, user_input_time))
             audio_thread.start()
 
             # Wait for the OpenAI response collection to finish
