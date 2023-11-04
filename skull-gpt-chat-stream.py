@@ -73,11 +73,11 @@ def collect_openai_responses(response_openai, queue, messages, user_input_time):
     print(f"Time to collect openai responses: {end_time_openai - user_input_time}")
     messages.append({"role": "assistant", "content": full_reply_content})
 
-def generate_and_stream_audio(queue, user_input_time):
+def generate_and_stream_audio(queue, user_input_time, arduino=None):
     while True:
         text = queue.get()  # get text from the queue
         if text is None: break  # None is the signal to stop
-        
+        start_got_first_chunk = time.time()
         # I have a feeling here that `generate` function is already optimised to stream audio effitiently
         # i have to measure time between user input and the first audio chunk with and without batching
 
@@ -93,8 +93,13 @@ def generate_and_stream_audio(queue, user_input_time):
             latency=4 # max latency optimisation
         )
         end_time_first_audio = time.time()
-        print(f"Time to generate audio: {end_time_first_audio - user_input_time}")
+        print(f"Time to generate audio: {end_time_first_audio - user_input_time}\n", 
+              f"Time from first chunk to first audio: {end_time_first_audio - start_got_first_chunk}")
+        if arduino:
+            arduino.write(b'g')
         stream(audio_stream)
+        if arduino:
+            arduino.write(b's')
         queue.task_done()
 
 def main(arduino=None):
@@ -125,7 +130,7 @@ def main(arduino=None):
 
             # Start the thread that generates and streams audio
             audio_thread = threading.Thread(target=generate_and_stream_audio, 
-                                            args=(message_queue, user_input_time))
+                                            args=(message_queue, user_input_time, arduino))
             audio_thread.start()
 
             # Wait for the OpenAI response collection to finish

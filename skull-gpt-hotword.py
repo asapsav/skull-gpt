@@ -8,6 +8,7 @@ import serial
 from elevenlabs import set_api_key, generate, stream
 import speech_recognition as sr
 import serial.tools.list_ports
+from pvrecorder import PvRecorder
 
 
 # THIS CODE KEEP GIVING ME ERROR:
@@ -21,10 +22,8 @@ def find_arduino_port():
             return p.device
     return None
 
-def recognize_speech():
-    recognizer = sr.Recognizer()
-    mic = sr.Microphone()
-    with mic as source:
+def recognize_speech(recognizer):
+    with sr.Microphone() as source:
         recognizer.adjust_for_ambient_noise(source)
         audio = recognizer.listen(source)
     try:
@@ -33,6 +32,8 @@ def recognize_speech():
         return None  # Return None if audio is not understood
     except sr.RequestError:
         return "Could not request results; check network"
+
+
 
 dotenv.load_dotenv()
 pico_key = os.getenv("PICO_ACCES_KEY")
@@ -45,15 +46,6 @@ porcupine = pvporcupine.create(
   keyword_paths=['picovoice_models/yo-skull_en_mac_v3_0_0.ppn']
 )
 
-pa = pyaudio.PyAudio()
-audio_stream = pa.open(
-    rate=16000,
-    channels=1,
-    format=pyaudio.paInt16,
-    input=True,
-    frames_per_buffer=porcupine.frame_length,
-    input_device_index=None
-)
 
 # SKULL_SYSTEM_PROMPT and main function definition
 SKULL_SYSTEM_PROMPT = """You are an evil bro skull. It is halloween season. 
@@ -67,21 +59,33 @@ def main(arduino=None):
     messages = [
         {"role": "system", "content": SKULL_SYSTEM_PROMPT}
     ]
+
+    recognizer = sr.Recognizer()
+
+    
     
     try:
         while True:
-            pcm = audio_stream.read(porcupine.frame_length)
-            pcm = np.frombuffer(pcm, dtype=np.int16)
-            keyword_index = porcupine.process(pcm)
+            recorder = PvRecorder(
+                frame_length=porcupine.frame_length,)
+                #device_index=None)
+            recorder.start()
+            print('Listening for keyword...')
+            pcm = recorder.read()
+            result = porcupine.process(pcm)
             
-            if keyword_index == 0:
+            if result >= 0:
                 print('Keyword detected, listening for command...')
-                pass
-                user_input = recognize_speech()
+                recorder.delete()
+                #porcupine.delete()
+
+                user_input = recognize_speech(recognizer)
+
                 if user_input is None:
                     print("No command recognized. Skipping.")
                     continue
                 print(f"You: {user_input}")
+
                 messages.append({"role": "user", "content": user_input})
 
                 completion = openai.ChatCompletion.create(
@@ -115,13 +119,11 @@ def main(arduino=None):
         print(f"An error occurred: {e}")
         if arduino:
             arduino.write(b's') 
-
-    #audio_stream.stop_stream()
-    #response_audio_stream.close()
-    pa.terminate()
-    porcupine.delete()
-    if arduino:
-        arduino.close()
+    finally:
+        #response_audio_stream.close()
+        porcupine.delete()
+        if arduino:
+            arduino.close()
 
 if __name__ == "__main__":
     try:
