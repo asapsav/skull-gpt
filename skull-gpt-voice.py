@@ -42,18 +42,7 @@ def recognize_speech():
 
     
 
-def main():
-    try:
-        arduino_port = find_arduino_port()
-        arduino = serial.Serial(arduino_port, 9600)
-        while True:  # handshake to prevent any signals from being lost
-            if arduino.readline().decode('ascii').strip() == "READY":
-                print(f"Arduino connected: {arduino.name}")
-                break
-    except Exception as e:
-        print(f"Failed to connect to Arduino: {e}")
-        return
-
+def main(arduino=None):
     messages = [
         {"role": "system", "content": SKULL_SYSTEM_PROMPT}
     ]
@@ -84,21 +73,34 @@ def main():
                 stream=True, 
                 latency=4
             )
-            arduino.write(b'g')
+            if arduino:
+                arduino.write(b'g')
             #print(f"Assistant: {assistant_message}")
             stream(audio_stream)
-            arduino.write(b's') 
+            if arduino:
+                arduino.write(b's') 
             
             messages.append({"role": "assistant", "content": assistant_message})
             
     except KeyboardInterrupt:
         print("Exiting...")
-        arduino.write(b's') 
+        if arduino:
+            arduino.write(b's')
+            arduino.close() 
     except Exception as e:
         print(f"An error occurred: {e}")
-        arduino.write(b's') 
-
-    arduino.close()
+        if arduino:
+            arduino.write(b's')
+            arduino.close() 
 
 if __name__ == "__main__":
-    main()
+    try:
+        arduino_port = find_arduino_port()
+        arduino = serial.Serial(arduino_port, 9600)
+        while arduino.readline().decode('ascii').strip() != "READY":
+            pass
+        print(f"Arduino connected: {arduino.name}")
+        main(arduino)
+    except Exception as e:
+        print(f"Failed to connect to Arduino: {e}")
+        main()
