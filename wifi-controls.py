@@ -1,8 +1,11 @@
 import requests
 import time
+import dotenv
+import os
+dotenv.load_dotenv()
 
-# Replace with your ESP32's IP address
-esp_ip = "192.168.7.139"
+esp_ip = os.getenv("esp_ip")
+
 
 def toggle_led(state):
     if state.lower() == 'on':
