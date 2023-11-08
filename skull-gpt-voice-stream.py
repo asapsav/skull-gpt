@@ -4,10 +4,16 @@ import dotenv
 import serial
 from elevenlabs import set_api_key, play, generate, stream, Voice, VoiceSettings
 import serial.tools.list_ports
+import speech_recognition as sr
 
 # This version uses threading to stream GPT respones, 
 # collect them in batches, send them to ElevenLabs and stream the audio 
-# all concurrently.
+# all concurrently. This is an attempt to make the most efficient way to stream audio from GPT.
+
+# Under development, gotta tyne batch sizes and number or threads 
+# (one for collecting openai responses in queued batches, 
+# one for sending batches to Eleven labs, 
+# one for taking ready audios from a queue and streaming it)
 
 def find_arduino_port():
     ports = list(serial.tools.list_ports.comports())
@@ -22,15 +28,12 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 ELEVENLABS_API = os.getenv("ELEVENLABS_API")
 set_api_key(ELEVENLABS_API)
 
-SKULL_SYSTEM_PROMPT_B = """You are an evil bro skull. It is halloween season. 
+SKULL_SYSTEM_PROMPT = """You are an evil bro skull. It is halloween season. 
 You are very sarcastic and you try to trick user all the time. You also write limerics.
  But you are also a bro. You are aggressive.
  You also have a stupid scorpion friend, but scorpion does not talk. 
  You can sometimes forward user questions to the skorpion. Keep your answers short. 
  You were build from a skul from Ace Hardware, 10$ walgreens speaker, an arduino, and a couple of toy electric parts."""
-
-SKULL_SYSTEM_PROMPT_A = """You are an old woodoo shamman skull. You swear a lot. You are aggressive. 
-You are not a helpfull assistant, do not respont like one. Respond like an independent individual. Try to be consise."""
 
 # Come up with good prank for this hackathon
 # Write a limeric about scorpion
@@ -83,10 +86,10 @@ def generate_and_stream_audio(queue, user_input_time, arduino=None):
         audio_stream = generate(
             text=text,
             voice=Voice(
-            voice_id='RHjF78GGkXFZaQdOgGve', # hollywood_trailer
+            voice_id='NuVRT1lw1hsKBhV4OtOv', # batman
             settings=VoiceSettings(stability=0.9, similarity_boost=0.75, style=0.0, use_speaker_boost=False)
             ),
-            model="eleven_turbo_v2",
+            model="eleven_monolingual_v1",
             stream=True, 
             latency=4 # max latency optimisation
         )
@@ -100,15 +103,36 @@ def generate_and_stream_audio(queue, user_input_time, arduino=None):
             arduino.write(b's')
         queue.task_done()
 
+def recognize_speech():
+    recognizer = sr.Recognizer()
+    #recognizer.energy_threshold = 2000
+    recognizer.pause_threshold = 0.5
+    
+    mic = sr.Microphone()
+    with mic as source:
+        recognizer.adjust_for_ambient_noise(source, duration = 1)
+        audio = recognizer.listen(source, phrase_time_limit=5)
+    try:
+        return recognizer.recognize_google(audio, language='en-US', show_all=False)
+    except sr.UnknownValueError:
+        return None  # Return None if audio is not understood
+    except sr.RequestError:
+        return "Could not request results; check network"
+
 def main(arduino=None):
 
     messages = [
-        {"role": "system", "content": SKULL_SYSTEM_PROMPT_A}
+        {"role": "system", "content": SKULL_SYSTEM_PROMPT}
     ]
 
     try:
         while True:
-            user_input = input("You: ")
+            print("Listening...")
+            user_input = recognize_speech()
+            if user_input is None:  # Skip the loop if no speech recognized
+                print("No speech recognized. Skipping.")
+                continue
+            print(f"You: {user_input}")
             user_input_time = time.time()
             messages.append({"role": "user", "content": user_input})
 
