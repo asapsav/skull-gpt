@@ -1,3 +1,6 @@
+# Skull-GPT
+This repo contains software, firmware and detailed instructions that allow anyone create talking toys using LLMs and speech synthesis models. The code is optimised for real-time streaming with sub-second latency, interruptions and voice-activations.
+
 ### Demos
 1. https://x.com/lizziepika/status/1719190574337765437?s=20
 2. 
